@@ -1,0 +1,134 @@
+import os
+import string
+
+# 1. Показать все папки, файлы и всё вместе
+def list_directories_files(path):
+    print("Папки:")
+    for item in os.listdir(path):
+        if os.path.isdir(os.path.join(path, item)):
+            print(item)
+
+    print("\nФайлы:")
+    for item in os.listdir(path):
+        if os.path.isfile(os.path.join(path, item)):
+            print(item)
+
+    print("\nВсе элементы:")
+    for item in os.listdir(path):
+        print(item)
+
+
+# 2. Проверить доступ к указанному пути
+def check_path_access(path):
+    if not os.path.exists(path):
+        print(f"Путь '{path}' не существует.")
+        return
+
+    print(f"Путь '{path}' существует.")
+    if os.access(path, os.R_OK):
+        print("Можно читать.")
+    else:
+        print("Нельзя читать.")
+
+    if os.access(path, os.W_OK):
+        print("Можно записывать.")
+    else:
+        print("Нельзя записывать.")
+
+    if os.access(path, os.X_OK):
+        print("Можно выполнять.")
+    else:
+        print("Нельзя выполнять.")
+
+
+# 3. Проверить путь и найти название файла и папки
+def check_file_path(path):
+    if os.path.exists(path):
+        print(f"Путь '{path}' существует.")
+        directory, filename = os.path.split(path)
+        print("Папка:", directory)
+        print("Имя файла:", filename)
+    else:
+        print(f"Путь '{path}' не найден.")
+
+
+# 4. Посчитать количество строк в текстовом файле
+def count_lines(file_path):
+    try:
+        with open(file_path, "r") as file:
+            lines = file.readlines()
+            print(f"Количество строк в файле: {len(lines)}")
+    except FileNotFoundError:
+        print("Файл не найден.")
+
+
+# 5. Записать список в файл
+def write_list_to_file(file_path, data):
+    with open(file_path, "w") as file:
+        for item in data:
+            file.write(item + "\n")
+    print("Данные записаны в файл.")
+
+
+# 6. Создать 26 текстовых файлов от A до Z
+def generate_files(folder):
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+
+    for code in range(ord('A'), ord('Z') + 1):
+        name = chr(code) + ".txt"
+        with open(os.path.join(folder, name), "w") as f:
+            f.write(f"Это файл {name}")
+    print("Файлы от A до Z созданы.")
+
+
+# 7. Скопировать содержимое одного файла в другой
+def copy_file(source, destination):
+    try:
+        with open(source, "r") as src:
+            content = src.read()
+        with open(destination, "w") as dst:
+            dst.write(content)
+        print("Файл успешно скопирован.")
+    except FileNotFoundError:
+        print("Исходный файл не найден.")
+
+
+# 8. Удалить файл (проверить существование и доступ)
+def delete_file(file_path):
+    if os.path.exists(file_path):
+        if os.access(file_path, os.W_OK):
+            os.remove(file_path)
+            print("Файл удалён.")
+        else:
+            print("Нет доступа для удаления.")
+    else:
+        print("Файл не существует.")
+
+if __name__ == "__main__":
+    path = os.getcwd()  # текущая директория
+    current_file = os.path.abspath(__file__)
+
+    print("\n--- Task 1 ---")
+    list_directories_files(path)
+
+    print("\n--- Task 2 ---")
+    check_path_access(path)
+
+    print("\n--- Task 3 ---")
+    check_file_path(current_file)
+
+    print("\n--- Task 4 ---")
+    count_lines(current_file)
+
+    print("\n--- Task 5 ---")
+    write_list_to_file("names.txt", ["Kendrick", "Kanye", "Steve Lacy"])
+
+    print("\n--- Task 6 ---")
+    generate_files("letters")
+
+    print("\n--- Task 7 ---")
+    copy_file("names.txt", "copy_names.txt")
+
+    print("\n--- Task 8 ---")
+    delete_file("copy_names.txt")
