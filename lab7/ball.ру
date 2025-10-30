@@ -1,0 +1,39 @@
+import pygame
+
+pygame.init()
+W, H = 700, 480
+scr = pygame.display.set_mode((W, H))
+pygame.display.set_caption("Red Ball")
+
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+
+SIZE = 50
+R = SIZE // 2
+x = (W - SIZE) // 2
+y = (H - SIZE) // 2
+SPEED = 7
+
+clock = pygame.time.Clock()
+run = True
+while run:
+    clock.tick(60)
+    for ev in pygame.event.get():
+        if ev.type == pygame.QUIT:
+            run = False
+
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_UP] and y - SPEED >= 0:
+        y -= SPEED
+    if keys[pygame.K_DOWN] and y + SPEED <= H - SIZE:
+        y += SPEED
+    if keys[pygame.K_LEFT] and x - SPEED >= 0:
+        x -= SPEED
+    if keys[pygame.K_RIGHT] and x + SPEED <= W - SIZE:
+        x += SPEED
+
+    scr.fill(BLACK)
+    pygame.draw.circle(scr, RED, (x + R, y + R), R)
+    pygame.display.flip()
+
+pygame.quit()
