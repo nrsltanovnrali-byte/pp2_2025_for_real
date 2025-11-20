@@ -1,0 +1,126 @@
+import pygame as pg
+import sys, random
+from pygame.math import Vector2
+
+pg.init()
+
+CELL = 30
+GRID = 20
+WIDTH = HEIGHT = CELL * GRID
+
+screen = pg.display.set_mode((WIDTH, HEIGHT))
+clock = pg.time.Clock()
+pg.display.set_caption("Simple Snake")
+
+font = pg.font.Font(None, 30)
+
+FOODS = {
+    "apple":  {"color": (255, 0, 0),   "points": 1, "life": 5000},
+    "banana": {"color": (255, 255, 0), "points": 2, "life": 4000},
+    "grape":  {"color": (150, 0, 200), "points": 3, "life": 3000},
+}
+
+class Fruit:
+    def __init__(self, snake):
+        self.snake = snake
+        self.spawn()
+
+    def spawn(self):
+        # случайная позиция, не на змейке
+        while True:
+            self.pos = Vector2(random.randrange(GRID), random.randrange(GRID))
+            if self.pos not in self.snake.body:
+                break
+
+        f = random.choice(list(FOODS.values()))
+        self.color = f["color"]
+        self.points = f["points"]
+        self.life = f["life"]
+        self.spawn_time = pg.time.get_ticks()
+
+    def draw(self):
+        rect = pg.Rect(self.pos.x * CELL, self.pos.y * CELL, CELL, CELL)
+        pg.draw.rect(screen, self.color, rect)
+
+    def expired(self):
+        return pg.time.get_ticks() - self.spawn_time > self.life
+
+
+class Snake:
+    def __init__(self):
+        self.body = [Vector2(5, 5), Vector2(4, 5)]
+        self.dir = Vector2(1, 0)
+        self.grow = False
+
+    def move(self):
+        self.body.insert(0, self.body[0] + self.dir)
+        if not self.grow:
+            self.body.pop()
+        self.grow = False
+
+    def draw(self):
+        for block in self.body:
+            rect = pg.Rect(block.x * CELL, block.y * CELL, CELL, CELL)
+            pg.draw.rect(screen, (50, 150, 255), rect)
+
+
+class Game:
+    def __init__(self):
+        self.snake = Snake()
+        self.fruit = Fruit(self.snake)
+        self.score = 0
+
+    def update(self):
+        self.snake.move()
+        if self.fruit.expired():
+            self.fruit.spawn()
+
+        if self.snake.body[0] == self.fruit.pos:
+            self.score += self.fruit.points
+            self.snake.grow = True
+            self.fruit.spawn()
+
+        self.check_fail()
+
+    def check_fail(self):
+        head = self.snake.body[0]
+        if (
+            not 0 <= head.x < GRID or
+            not 0 <= head.y < GRID or
+            head in self.snake.body[1:]
+        ):
+            pg.quit()
+            sys.exit()
+
+    def draw(self):
+        self.snake.draw()
+        self.fruit.draw()
+        score_text = font.render(f"Score: {self.score}", True, (255, 255, 255))
+        screen.blit(score_text, (10, 10))
+
+
+game = Game()
+UPDATE = pg.USEREVENT
+pg.time.set_timer(UPDATE, 150)
+
+while True:
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            pg.quit()
+            sys.exit()
+        if event.type == UPDATE:
+            game.update()
+        if event.type == pg.KEYDOWN:
+            if event.key == pg.K_UP and game.snake.dir.y != 1:
+                game.snake.dir = Vector2(0, -1)
+            if event.key == pg.K_DOWN and game.snake.dir.y != -1:
+                game.snake.dir = Vector2(0, 1)
+            if event.key == pg.K_LEFT and game.snake.dir.x != 1:
+                game.snake.dir = Vector2(-1, 0)
+            if event.key == pg.K_RIGHT and game.snake.dir.x != -1:
+                game.snake.dir = Vector2(1, 0)
+
+    screen.fill((100, 200, 100))
+    game.draw()
+    pg.display.flip()
+    clock.tick(60)
