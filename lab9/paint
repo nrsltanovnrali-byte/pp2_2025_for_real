@@ -1,0 +1,120 @@
+import pygame
+import math
+
+def main():
+    pygame.init()
+    screen = pygame.display.set_mode((640, 480))
+    clock = pygame.time.Clock()
+
+    radius = 2
+    mode = 'brush'
+    color = (0, 0, 255)
+    start_pos = None
+    drawing = False
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return
+
+                # Brush colors
+                if event.key == pygame.K_b:
+                    color = (0, 0, 255)
+                    mode = "brush"
+                elif event.key == pygame.K_g:
+                    color = (0, 255, 0)
+                    mode = "brush"
+                elif event.key == pygame.K_r:
+                    color = (255, 0, 0)
+                    mode = "brush"
+
+                # Shapes
+                elif event.key == pygame.K_c:
+                    mode = "circle"
+                elif event.key == pygame.K_t:
+                    mode = "rect"
+                elif event.key == pygame.K_s:
+                    mode = "square"
+                elif event.key == pygame.K_y:
+                    mode = "right_triangle"
+                elif event.key == pygame.K_e:
+                    mode = "equilateral"
+                elif event.key == pygame.K_h:
+                    mode = "rhombus"
+
+                # Eraser
+                elif event.key == pygame.K_x:
+                    mode = "eraser"
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                start_pos = event.pos
+                drawing = True
+
+            if event.type == pygame.MOUSEBUTTONUP:
+                drawing = False
+                end_pos = event.pos
+
+                dx = end_pos[0] - start_pos[0]
+                dy = end_pos[1] - start_pos[1]
+
+                # Rectangle
+                if mode == "rect":
+                    pygame.draw.rect(screen, color, pygame.Rect(start_pos, (dx, dy)), 2)
+
+                # Circle
+                elif mode == "circle":
+                    radius_shape = int(math.dist(start_pos, end_pos))
+                    pygame.draw.circle(screen, color, start_pos, radius_shape, 2)
+
+                # Square (используем минимальную сторону)
+                elif mode == "square":
+                    side = min(abs(dx), abs(dy))
+                    rect = pygame.Rect(start_pos[0], start_pos[1], side, side)
+                    pygame.draw.rect(screen, color, rect, 2)
+
+                # Right triangle
+                elif mode == "right_triangle":
+                    triangle = [
+                        start_pos,
+                        (start_pos[0], end_pos[1]),
+                        end_pos
+                    ]
+                    pygame.draw.polygon(screen, color, triangle, 2)
+
+                # Equilateral triangle
+                elif mode == "equilateral":
+                    side = int(math.dist(start_pos, end_pos))
+                    p1 = start_pos
+                    p2 = (start_pos[0] + side, start_pos[1])
+                    height = side * (math.sqrt(3) / 2)
+                    p3 = (start_pos[0] + side / 2, start_pos[1] - height)
+                    pygame.draw.polygon(screen, color, [p1, p2, p3], 2)
+
+                # Rhombus (алмаз)
+                elif mode == "rhombus":
+                    center = start_pos
+                    dx = end_pos[0] - start_pos[0]
+                    dy = end_pos[1] - start_pos[1]
+                    rhombus = [
+                        (center[0], center[1] - abs(dy)),  # top
+                        (center[0] + abs(dx), center[1]),  # right
+                        (center[0], center[1] + abs(dy)),  # bottom
+                        (center[0] - abs(dx), center[1])   # left
+                    ]
+                    pygame.draw.polygon(screen, color, rhombus, 2)
+
+            # Drawing with brush / eraser
+            if event.type == pygame.MOUSEMOTION and drawing:
+                if mode == "brush":
+                    pygame.draw.circle(screen, color, event.pos, radius)
+                elif mode == "eraser":
+                    pygame.draw.circle(screen, (255, 255, 255), event.pos, radius)
+
+        pygame.display.flip()
+        clock.tick(60)
+
+main()
