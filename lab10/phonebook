@@ -1,0 +1,136 @@
+import psycopg2
+import csv
+
+conn = psycopg2.connect(
+    host="localhost",
+    dbname="phonebook",
+    user="postgres",
+    password="678910",
+    port=5432
+)
+
+cur = conn.cursor()
+first_start = True
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255),
+    user_phone VARCHAR(255)
+);
+""")
+conn.commit()
+
+while True:
+
+    if first_start:
+        first_start = False
+        print(
+            "Привет! это телефонная книга.\n"
+            "Вы можете добавить в книгу:\n"
+            "*Свой номер\n"
+            "*Свое имя\n\n"
+            "Добавить информацию можно через:\n"
+            "терминал вводя ваши данные,\n"
+            "*csv file\n\n"
+        )
+        continue
+
+    print(
+        "Варианты действий:\n"
+        "1: Добавить данные через терминал\n"
+        "2: Добавить данные через CSV файл\n"
+        "3: Обновить телефон по имени\n"
+        "4: Обновить имя по телефону\n"
+        "5: Вывести имена на букву\n"
+        "6: Удалить данные по номеру\n"
+        "7: Выйти\n"
+    )
+
+    try:
+        user_choice = int(input("Ваш выбор: "))
+    except:
+        print("Введите число!")
+        continue
+
+    # 1. Add terminal input
+    if user_choice == 1:
+        user_name = input("Введите имя: ")
+        user_phone = input("Введите номер: ")
+
+        cur.execute("INSERT INTO users (username, user_phone) VALUES (%s, %s);",
+                    (user_name, user_phone))
+        conn.commit()
+        print("Успешно добавлено!\n")
+
+    # 2. Add CSV
+    elif user_choice == 2:
+        csv_file_path = input("Введите путь к CSV: ")
+
+        with open(csv_file_path, 'r') as csv_file:
+            csv_reader = csv.reader(csv_file)
+            next(csv_reader)
+
+            for row in csv_reader:
+                try:
+                    cur.execute(
+                        "INSERT INTO users (username, user_phone) VALUES (%s, %s)",
+                        (row[1], row[2])
+                    )
+                except Exception as e:
+                    print("Ошибка вставки строки:", row, e)
+
+        conn.commit()
+        print("Данные из CSV успешно добавлены!\n")
+
+    # 3. Update phone by name
+    elif user_choice == 3:
+        name = input("Введите имя: ")
+        phone = input("Введите новый номер: ")
+
+        cur.execute("UPDATE users SET user_phone = %s WHERE username = %s",
+                    (phone, name))
+        conn.commit()
+        print("Номер обновлён!\n")
+
+    # 4. Update name by phone
+    elif user_choice == 4:
+        phone = input("Введите номер: ")
+        new_name = input("Введите новое имя: ")
+
+        cur.execute("UPDATE users SET username = %s WHERE user_phone = %s",
+                    (new_name, phone))
+        conn.commit()
+        print("Имя обновлено!\n")
+
+    # 5. Filter by first letter
+    elif user_choice == 5:
+        letter = input("Введите букву: ")
+
+        cur.execute("SELECT username, user_phone FROM users WHERE username ILIKE %s",
+                    (letter + "%",))
+        rows = cur.fetchall()
+
+        for row in rows:
+            print(row[0], "-", row[1])
+
+        print("Готово!\n")
+
+    # 6. Delete by phone
+    elif user_choice == 6:
+        phone = input("Введите номер для удаления: ")
+
+        cur.execute("DELETE FROM users WHERE user_phone = %s", (phone,))
+        conn.commit()
+        print("Удалено!\n")
+
+    # 7. Exit
+    elif user_choice == 7:
+        print("Выход...")
+        break
+
+    else:
+        print("Неверный выбор!\n")
+
+cur.close()
+conn.close()
