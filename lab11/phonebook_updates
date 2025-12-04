@@ -51,7 +51,6 @@ def queryData():
 
     curs.execute("SELECT * FROM search_records_pattern(%s)", (pattern,))
     rows = curs.fetchall()
-
     print("\n--- Found Records ---")
     for r in rows:
         print(r)
@@ -67,8 +66,8 @@ def deleteData():
     phone = input("Enter phone (or leave empty): ").strip()
     if phone == "":
         phone = None
-
     curs.execute("CALL delete_records(%s, %s)", (name_or_lname, phone))
+
     print("Deleted.\n")
 
 
