@@ -1,6 +1,7 @@
 import psycopg2
 import csv
 
+# Подключение к базе
 connection = psycopg2.connect(
     host='localhost',
     database='phonebook',
@@ -10,47 +11,84 @@ connection = psycopg2.connect(
 connection.autocommit = True
 curs = connection.cursor()
 
-
+# Вставка или обновление одного пользователя
 def inputData():
     fname = input("Firstname: ").strip()
     lname = input("Lastname: ").strip()
     phone = input("Phone number: ").strip()
 
-    curs.execute("CALL insert_or_update_user(%s, %s, %s)", (fname, lname, phone))
-    print("User inserted or updated successfully.\n")
+    curs.execute("SELECT id FROM users WHERE firstname=%s AND lastname=%s", (fname, lname))
+    row = curs.fetchone()
+    if row:
+        curs.execute("UPDATE users SET phone=%s WHERE id=%s", (phone, row[0]))
+        print("User updated successfully.\n")
+    else:
+        curs.execute("INSERT INTO users (firstname, lastname, phone) VALUES (%s, %s, %s)", (fname, lname, phone))
+        print("User inserted successfully.\n")
 
-
+# Импорт пользователей из CSV
 def importFromCSV():
-    path = input("Enter CSV path: ")
+    path = input("Enter CSV path: ").strip()
+    incorrect = []
 
-    data = []
     with open(path, 'r') as file:
         reader = csv.reader(file)
         for row in reader:
-            data.append(row)  # fname, lname, phone
+            if len(row) != 3:
+                incorrect.append(row)
+                continue
+            fname, lname, phone = row
+            if not phone.isdigit():
+                incorrect.append(row)
+                continue
+            curs.execute("SELECT id FROM users WHERE firstname=%s AND lastname=%s", (fname, lname))
+            existing = curs.fetchone()
+            if existing:
+                curs.execute("UPDATE users SET phone=%s WHERE id=%s", (phone, existing[0]))
+            else:
+                curs.execute("INSERT INTO users (firstname, lastname, phone) VALUES (%s, %s, %s)", (fname, lname, phone))
 
-    curs.execute("CALL insert_multiple_users(%s)", (data,))
-    print("Users imported.\n")
+    if incorrect:
+        print("Incorrect rows skipped:", incorrect)
+    else:
+        print("All users imported successfully.\n")
 
-
+# Пагинация пользователей
 def update_contact():
-    limit = int(input("Limit: "))
-    offset = int(input("Offset: "))
+    try:
+        limit = int(input("Limit: "))
+        offset = int(input("Offset: "))
+    except ValueError:
+        print("Invalid input.\n")
+        return
 
-    curs.execute("SELECT * FROM get_records_with_pagination(%s, %s)", (limit, offset))
+    curs.execute("SELECT * FROM users LIMIT %s OFFSET %s", (limit, offset))
     rows = curs.fetchall()
+
+    if not rows:
+        print("No records found.\n")
+        return
 
     print("\n--- Records ---")
     for r in rows:
         print(r)
     print()
 
-
+# Поиск по шаблону
 def queryData():
     pattern = input("Enter pattern to search: ").strip()
+    search_pattern = f"%{pattern}%"
 
-    curs.execute("SELECT * FROM search_records_pattern(%s)", (pattern,))
+    curs.execute(
+        "SELECT * FROM users WHERE firstname LIKE %s OR lastname LIKE %s OR phone LIKE %s",
+        (search_pattern, search_pattern, search_pattern)
+    )
     rows = curs.fetchall()
+
+    if not rows:
+        print("No matching records found.\n")
+        return
+
     print("\n--- Found Records ---")
     for r in rows:
         print(r)
@@ -60,27 +98,33 @@ def queryData():
             file.write(str(r) + "\n")
     print("Saved to queriedData.txt\n")
 
-
+# Удаление по имени/фамилии и/или телефону
 def deleteData():
     name_or_lname = input("Enter name or lastname: ").strip()
-    phone = input("Enter phone (or leave empty): ").strip()
-    if phone == "":
-        phone = None
-    curs.execute("CALL delete_records(%s, %s)", (name_or_lname, phone))
+    phone = input("Enter phone (optional): ").strip() or None
 
+    if phone:
+        curs.execute(
+            "DELETE FROM users WHERE (firstname=%s OR lastname=%s) AND phone=%s",
+            (name_or_lname, name_or_lname, phone)
+        )
+    else:
+        curs.execute(
+            "DELETE FROM users WHERE firstname=%s OR lastname=%s",
+            (name_or_lname, name_or_lname)
+        )
     print("Deleted.\n")
 
-
+# Удаление всех данных
 def deleteAllData():
-    sure = input("Are you sure? (1 = yes): ")
+    sure = input("Are you sure? (1 = yes): ").strip()
     if sure == "1":
         curs.execute("DELETE FROM users")
         print("All data deleted.\n")
     else:
-        print("Cancelled\n")
+        print("Cancelled.\n")
 
-
-# MAIN MENU
+# Главное меню
 while True:
     print("""
 What do you want to do?
@@ -90,9 +134,9 @@ What do you want to do?
 [4] Query data
 [5] Delete by name or phone
 [6] Delete all data
-[7] Exit""")
-
-    choice = input("Enter number: ")
+[7] Exit
+""")
+    choice = input("Enter number: ").strip()
 
     if choice == "1":
         inputData()
@@ -106,9 +150,11 @@ What do you want to do?
         deleteData()
     elif choice == "6":
         deleteAllData()
-    else:
+    elif choice == "7":
         print("Goodbye.")
         break
+    else:
+        print("Invalid choice. Try again.\n")
 
 curs.close()
 connection.close()
