@@ -1,0 +1,115 @@
+import psycopg2
+import csv
+
+connection = psycopg2.connect(
+    host='localhost',
+    database='phonebook',
+    user='postgres',
+    password='678910'
+)
+connection.autocommit = True
+curs = connection.cursor()
+
+
+def inputData():
+    fname = input("Firstname: ").strip()
+    lname = input("Lastname: ").strip()
+    phone = input("Phone number: ").strip()
+
+    curs.execute("CALL insert_or_update_user(%s, %s, %s)", (fname, lname, phone))
+    print("User inserted or updated successfully.\n")
+
+
+def importFromCSV():
+    path = input("Enter CSV path: ")
+
+    data = []
+    with open(path, 'r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            data.append(row)  # fname, lname, phone
+
+    curs.execute("CALL insert_multiple_users(%s)", (data,))
+    print("Users imported.\n")
+
+
+def update_contact():
+    limit = int(input("Limit: "))
+    offset = int(input("Offset: "))
+
+    curs.execute("SELECT * FROM get_records_with_pagination(%s, %s)", (limit, offset))
+    rows = curs.fetchall()
+
+    print("\n--- Records ---")
+    for r in rows:
+        print(r)
+    print()
+
+
+def queryData():
+    pattern = input("Enter pattern to search: ").strip()
+
+    curs.execute("SELECT * FROM search_records_pattern(%s)", (pattern,))
+    rows = curs.fetchall()
+
+    print("\n--- Found Records ---")
+    for r in rows:
+        print(r)
+
+    with open("queriedData.txt", "w") as file:
+        for r in rows:
+            file.write(str(r) + "\n")
+    print("Saved to queriedData.txt\n")
+
+
+def deleteData():
+    name_or_lname = input("Enter name or lastname: ").strip()
+    phone = input("Enter phone (or leave empty): ").strip()
+    if phone == "":
+        phone = None
+
+    curs.execute("CALL delete_records(%s, %s)", (name_or_lname, phone))
+    print("Deleted.\n")
+
+
+def deleteAllData():
+    sure = input("Are you sure? (1 = yes): ")
+    if sure == "1":
+        curs.execute("DELETE FROM users")
+        print("All data deleted.\n")
+    else:
+        print("Cancelled\n")
+
+
+# MAIN MENU
+while True:
+    print("""
+What do you want to do?
+[1] Input data from console
+[2] Upload from CSV
+[3] Users by limit and offset
+[4] Query data
+[5] Delete by name or phone
+[6] Delete all data
+[7] Exit""")
+
+    choice = input("Enter number: ")
+
+    if choice == "1":
+        inputData()
+    elif choice == "2":
+        importFromCSV()
+    elif choice == "3":
+        update_contact()
+    elif choice == "4":
+        queryData()
+    elif choice == "5":
+        deleteData()
+    elif choice == "6":
+        deleteAllData()
+    else:
+        print("Goodbye.")
+        break
+
+curs.close()
+connection.close()
